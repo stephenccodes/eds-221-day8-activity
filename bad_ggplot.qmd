@@ -1,0 +1,139 @@
+---
+title: "EDS221 day 8 activity"
+author: "Stephen Carroll"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+## Task 1.
+```{r}
+# attach packages ----
+library(here)
+library(tidyverse)
+library(janitor)
+library(patchwork)
+library(ggrepel)
+library(gghighlight)
+library(paletteer)
+library(ggExtra)
+library(ggbeeswarm)
+library(gapminder)
+library(sf)
+```
+
+```{r}
+# read in the data ----
+space <- read_csv(here("data", "space_launches.csv"))
+```
+
+```{r}
+# make a bad ggplot ----
+
+ggplot(data = space, aes(x = launch_year, y = type))+
+  geom_jitter(color = "red", 
+              size = 0.4,
+              alpha = 0.5)+
+  theme(panel.grid = element_blank(),
+        panel.grid.minor.x = element_line(),
+        text = element_text(size = 3.5, family = "sans"),
+        axis.text.x = element_text(color = "powderblue"),
+        axis.title.y = element_text(color = "purple"),
+        panel.background = element_rect(color = "coral", fill = "plum"))+
+  geom_vline(xintercept = 1975, color = "green")+
+  annotate("text", x = 2000, y = 300, label = "Rockets are fun!", color = "orange")+
+  labs(x = "Launch Year", 
+       y = "Launch Vehicle",
+       title = "Launch Vehicles Over the Years")+
+  scale_x_continuous(breaks = c(1980, 1999, 2001, 2010),
+                     limits = c(1960, 2015))+
+  scale_color_date(low = "yellow", high = "pink")
+```
+
+```{r}
+# save it as a png. adjust dimensions so it fits. ----
+
+ggsave(here("figs", "bad_rockets.png"), height = 10, width = 10)
+```
+
+## Task 2. 
+```{r}
+# read in the greenhouse gas data ----
+sfgas <- read_csv(here("data", "San_Francisco_Communitywide_Greenhouse_Gas_Inventory.csv"))
+```
+
+```{r}
+# 1. create a summary table of total annual greenhouse gas emission by sector_general ----
+
+emissions_sector <- sfgas %>%
+  group_by(Sector_General)%>%
+  summarise(Emissions_mtCO2e = sum(Emissions_mtCO2e, na.rm = TRUE))
+```
+
+```{r}
+# 2. create a summary table of total annual greenhouse gas emissions by year and commodity type ----
+
+emissions_year_commodity <- sfgas %>%
+  group_by(Calendar_Year, Commodity_Type)%>%
+  summarise(Emissions_mtCO2e = sum(Emissions_mtCO2e, na.rm = TRUE))
+```
+
+```{r}
+# 3. create a subset of the data that only contains observations from 2005 on where sector_detail2 contains the pattern "PG&E" then limit to columns Calendar_Year, Sector_Detail2, and Emissions_mtCO2e
+
+emissions_2005 <- sfgas %>%
+  filter(Calendar_Year >= 2005) %>%
+  filter(str_detect(Sector_Detail2, "PG&E")) %>%
+  select(Calendar_Year, Sector_Detail2, Emissions_mtCO2e)
+```
+
+## Task 3.
+# create a graph of SF greenhouse gas emissions
+# make it pretty
+
+```{r}
+# create a data summary table highlighting wastewater ----
+sf_waste_gas <- sfgas %>%
+  filter(str_detect(Sector_General, "Wastewater"))%>%
+  group_by(Calendar_Year, Sector_Detail2, Emissions_mtCO2e, Biogenic_Emissions_mtCO2e)%>%
+  summarise(total_emissions = sum(Emissions_mtCO2e, Biogenic_Emissions_mtCO2e, na.rm = TRUE))
+```
+
+
+
+```{r}
+# plot it to compare the emissions by various stages of treatment ----
+ggplot(data = sf_waste_gas, aes(x = Calendar_Year, y = total_emissions, color = Sector_Detail2)) +
+  geom_line(size = 1, show.legend = FALSE) +
+  scale_x_continuous(breaks = c(1990, 1995, 2000, 2005, 2010, 2015, 2020),
+                     limits = c(1990, 2020))+
+  scale_y_log10(labels = scales::label_comma() )+
+  #facet_wrap(~ Sector_Detail2, ncol = 1, scales = "free") +
+  theme_light()+
+  labs(title = "San Francisco Wastewater Emissions", 
+       x = "Year",
+       y = "Total Emissions\n(Metric Tons)")+
+  annotate("text", 
+           x = 1993, 
+           y = 18000, 
+           label = "Digester Gas",
+           size = 4)+
+  annotate("text",
+           x = 1993, 
+           y = 4000, 
+           label = "Fugitive", 
+           size = 4)+
+  annotate("text",
+           x = 1993, 
+           y = 900, 
+           label = "Process", 
+           size = 4)
+  
+```
+
+```{r}
+# save it to a .png file
+ggsave(here("figs", "sf_wastewater_emissions.png"), height = 10, width = 10)
+```
+
+
