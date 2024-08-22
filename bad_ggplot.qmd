@@ -113,6 +113,7 @@ ggplot(data = sf_waste_gas, aes(x = Calendar_Year, y = total_emissions, color = 
   labs(title = "San Francisco Wastewater Emissions", 
        x = "Year",
        y = "Total Emissions\n(Metric Tons)")+
+  theme(plot.title = element_text(hjust = 0.5))+
   annotate("text", 
            x = 1993, 
            y = 18000, 
